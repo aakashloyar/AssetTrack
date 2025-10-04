@@ -1,0 +1,20 @@
+# Ignore build directories
+bin/
+obj/
+
+# User-specific files
+.vs/
+.vscode/
+
+# Ignore secrets files (if you don't want them in source control)
+appsettings.Development.json
+appsettings.json
+
+# Ignore temporary files
+*.log
+
+# Ignore Visual Studio specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
