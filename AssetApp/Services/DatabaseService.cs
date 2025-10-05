@@ -42,11 +42,12 @@ namespace AssetApp.Services
             return await connection.ExecuteAsync(sql, parameters);
         }
 
-        //  Execute scalar query (e.g., return new ID after insert)
+        //  Execute scalar query -> return new ID or single value
         public async Task<T> ExecuteScalarAsync<T>(string sql, object? parameters = null)
         {
             using var connection = CreateConnection();
             return await connection.ExecuteScalarAsync<T>(sql, parameters);
         }
+
     }
 }
