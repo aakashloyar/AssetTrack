@@ -1,0 +1,163 @@
+@page "/assets"
+@rendermode InteractiveServer
+@inject AssetApp.Services.AssetService AssetService
+@using AssetApp.Models
+@using AssetApp.Components.Common
+<h3>💼 Assets</h3>
+
+<button class="btn btn-primary mb-3" @onclick="OpenAddModal">➕ Add Asset</button>
+
+@if (isLoading)
+{
+    <p>⏳ Loading assets...</p>
+}
+else if (!assets.Any())
+{
+    <p>No assets found.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>S.No</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Condition</th>
+                <th>Status</th>
+                <th>Is Spare</th>
+                <th>Purchase Date</th>
+                <th>Warranty Expiry</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in assets)
+            {
+                <tr>
+                    <td>@a.AssetID</td>
+                    <td><TruncateText Text="@a.SerialNumber" MaxLength="15" /></td>
+                    <td><TruncateText Text="@a.AssetName" MaxLength="20" /></td>
+                    <td>@(a.AssetType.ToString())</td>
+                    <td>@(a.Condition.ToString())</td>
+                    <td>@(a.Status.ToString())</td>
+                    <td>@(a.IsSpare.ToString())</td>
+                    <td>@a.PurchaseDate.ToShortDateString()</td>
+                    <td>@(a.WarrantyExpiryDate?.ToShortDateString() ?? "-")</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary me-2" @onclick="() => OpenEditModal(a)">Edit</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => OpenDeleteModal(a)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<AssetFormModal Asset="@selectedAsset" Title="@modalTitle" Visible="@formModalVisible"
+                OnClose="CloseFormModal" OnSaved="SaveAsset" />
+
+<DeleteConfirmationModal Visible="@deleteModalVisible"
+                         Title="Delete Asset"
+                         ItemName="@selectedAsset?.AssetName"
+                         OnClose="CloseDeleteModal"
+                         OnConfirmed="ConfirmDelete" />
+
+<Toast Message="@toastMessage" OnClose="() => toastMessage = null" />
+
+@code {
+    private List<Asset> assets = new();
+    private bool isLoading = true;
+
+    private bool formModalVisible = false;
+    private string modalTitle = "Add Asset";
+    private Asset selectedAsset = new();
+
+    private bool deleteModalVisible = false;
+    private string? toastMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        await AssetService.CreateTableIfNotExistsAsync();
+        assets = (await AssetService.GetAllAsync()).ToList();
+        isLoading = false;
+    }
+
+    // ================= Add / Edit =================
+    private void OpenAddModal()
+    {
+        selectedAsset = new Asset { PurchaseDate = DateTime.Now };
+        modalTitle = "Add Asset";
+        formModalVisible = true;
+    }
+
+    private void OpenEditModal(Asset asset)
+    {
+        selectedAsset = new Asset
+        {
+            AssetID = asset.AssetID,
+            AssetName = asset.AssetName,
+            AssetType = asset.AssetType,
+            MakeModel = asset.MakeModel,
+            SerialNumber = asset.SerialNumber,
+            PurchaseDate = asset.PurchaseDate,
+            WarrantyExpiryDate = asset.WarrantyExpiryDate,
+            Condition = asset.Condition,
+            Status = asset.Status,
+            IsSpare = asset.IsSpare,
+            Specifications = asset.Specifications
+        };
+        modalTitle = "Edit Asset";
+        formModalVisible = true;
+    }
+
+    private void CloseFormModal() => formModalVisible = false;
+
+    private async Task SaveAsset(Asset asset)
+    {
+        if (asset.AssetID == 0)
+        {
+            await AssetService.AddAsync(asset);
+            toastMessage = "✅ Asset added successfully!";
+        }
+        else
+        {
+            await AssetService.UpdateAsync(asset);
+            toastMessage = "✅ Asset updated successfully!";
+        }
+
+        assets = (await AssetService.GetAllAsync()).ToList();
+        formModalVisible = false;
+        StateHasChanged();
+        await Task.Delay(3000);
+        toastMessage = null;
+        StateHasChanged();
+    }
+
+    // ================= Delete =================
+    private void OpenDeleteModal(Asset asset)
+    {
+        selectedAsset = asset;
+        deleteModalVisible = true;
+    }
+
+    private void CloseDeleteModal() => deleteModalVisible = false;
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedAsset != null)
+        {
+            await AssetService.DeleteAsync(selectedAsset.AssetID);
+            assets = (await AssetService.GetAllAsync()).ToList();
+            toastMessage = "✅ Asset deleted successfully!";
+        }
+
+        deleteModalVisible = false;
+        StateHasChanged();
+        await Task.Delay(3000);
+        toastMessage = null;
+        StateHasChanged();
+    }
+}
