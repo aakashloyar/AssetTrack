@@ -12,7 +12,7 @@ namespace AssetApp.Services
             _dbService = dbService;
         }
 
-         // Create Table (if not exists)
+        // Create Table (if not exists)
         public async Task CreateTableIfNotExistsAsync()
         {
             await _dbService.ExecuteAsync(EmployeeQueries.CreateTable);
@@ -56,6 +56,25 @@ namespace AssetApp.Services
                 new { EmployeeID = employeeId }
             );
             return rowsAffected > 0;
+        }
+        
+        public async Task<IEnumerable<Employee>> GetFilteredEmployeesAsync(
+            string? fullName,
+            string? department,
+            string? email,
+            string? phoneNumber)
+        {
+            var sql = EmployeeQueries.GetFilteredEmployees(fullName, department, email, phoneNumber);
+
+            var employees = await _dbService.QueryAsync<Employee>(sql, new
+            {
+                FullName = fullName,
+                Department = department,
+                Email = email,
+                PhoneNumber = phoneNumber
+            });
+
+            return employees;
         }
     }
 }
