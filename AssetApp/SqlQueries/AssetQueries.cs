@@ -47,5 +47,29 @@ namespace AssetApp.Data
         ";
 
         public const string DeleteAsset = @"DELETE FROM Assets WHERE AssetID = @AssetID";
+
+
+
+        public static string GetFilteredAssetsSimple(
+            string? assetName,
+            string? assetType,
+            string? status,
+            string? serialNumber)
+        {
+            var sql = @"SELECT * FROM Assets WHERE 1=1";
+
+            if (!string.IsNullOrEmpty(assetName))
+                sql += " AND AssetName LIKE '%' + @AssetName + '%'";
+            if (!string.IsNullOrEmpty(assetType))
+                sql += " AND AssetType = @AssetType";
+            if (!string.IsNullOrEmpty(status))
+                sql += " AND Status = @Status";
+            if (!string.IsNullOrEmpty(serialNumber))
+                sql += " AND SerialNumber LIKE '%' + @SerialNumber + '%'";
+
+            sql += " ORDER BY AssetName"; // default sort
+            return sql;
+        }
+
     }
 }
