@@ -16,7 +16,7 @@ namespace AssetApp.Data
                 Status NVARCHAR(20)
             );
         ";
-        
+
         public const string GetAllEmployees = @"
             SELECT * FROM Employees";
 
@@ -40,6 +40,26 @@ namespace AssetApp.Data
 
         public const string DeleteEmployee = @"
             DELETE FROM Employees WHERE EmployeeId=@EmployeeID";
-            
+        
+
+        public static string GetFilteredEmployees(string? fullName, string? department, string? email, string? phoneNumber)
+        {
+            var sql = @"
+                SELECT *
+                FROM Employees
+                WHERE 1=1";
+
+            if (!string.IsNullOrEmpty(fullName))
+                sql += " AND FullName LIKE '%' + @FullName + '%'";
+            if (!string.IsNullOrEmpty(department))
+                sql += " AND Department = @Department";
+            if (!string.IsNullOrEmpty(email))
+                sql += " AND Email LIKE '%' + @Email + '%'";
+            if (!string.IsNullOrEmpty(phoneNumber))
+                sql += " AND PhoneNumber LIKE '%' + @PhoneNumber + '%'";
+
+            sql += " ORDER BY FullName"; // default sort
+            return sql;
+        }
     }
 }
