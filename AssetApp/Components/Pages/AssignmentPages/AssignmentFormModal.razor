@@ -1,0 +1,88 @@
+@using AssetApp.Models
+@inject AssetApp.Services.AssetService AssetService
+@inject AssetApp.Services.AssignmentService AssignmentService
+<div class="modal fade @(Visible ? "show d-block" : "")" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Title</h5>
+                <button type="button" class="btn-close" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@Assignment" OnValidSubmit="SubmitForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Asset ID</label>
+                            @if (Assignment.AssignmentID == 0)
+                            {
+                                <InputNumber class="form-control" @bind-Value="Assignment.AssetID" />
+                            }
+                            else
+                            {
+                                <InputNumber class="form-control" @bind-Value="Assignment.AssetID" Disabled="true" />
+                            }
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Employee ID</label>
+                            @if (Assignment.AssignmentID == 0)
+                            {
+                                <InputNumber class="form-control" @bind-Value="Assignment.EmployeeID" />
+                            }
+                            else
+                            {
+                                <InputNumber class="form-control" @bind-Value="Assignment.EmployeeID" Disabled="true" />
+                            }
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Assigned Date</label>
+                            <InputDate class="form-control" @bind-Value="Assignment.AssignedDate" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Returned Date</label>
+                            <InputDate class="form-control" @bind-Value="Assignment.ReturnedDate" />
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            <InputTextArea class="form-control" @bind-Value="Assignment.Notes" rows="3" />
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Save</button>
+                        <button type="button" class="btn btn-secondary" @onclick="Close">Cancel</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<Assignment> OnSaved { get; set; }
+    [Parameter] public Assignment Assignment { get; set; } = new();
+    [Parameter] public string Title { get; set; } = "Assign Asset";
+
+    private async Task Close()
+    {
+        if (OnClose.HasDelegate)
+            await OnClose.InvokeAsync(null);
+    }
+
+    private async Task SubmitForm()
+    {
+        if (OnSaved.HasDelegate)
+            await OnSaved.InvokeAsync(Assignment);
+    }
+}

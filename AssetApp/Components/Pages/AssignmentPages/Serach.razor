@@ -1,0 +1,126 @@
+@page "/assets-filter"
+@inject AssetApp.Services.AssetService AssetService
+@using AssetApp.Models
+@using AssetApp.Components.Common
+@rendermode InteractiveServer
+<h3>🔍 Asset Search & List</h3>
+
+<div class="card mb-3 p-3">
+    <div class="row g-2">
+        <div class="col-md-3">
+            <label>Asset Name</label>
+            <InputText class="form-control" @bind-Value="filters.AssetName" />
+        </div>
+        <div class="col-md-2">
+            <label>Asset Type</label>
+            <InputSelect class="form-select" @bind-Value="filters.AssetType">
+                <option value="">All</option>
+                @foreach (var type in Enum.GetValues<AssetType>())
+                {
+                    <option value="@type">@type</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="col-md-2">
+            <label>Status</label>
+            <InputSelect class="form-select" @bind-Value="filters.Status">
+                <option value="">All</option>
+                @foreach (var status in Enum.GetValues<AssetStatus>())
+                {
+                    <option value="@status">@status</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="col-md-3">
+            <label>Serial Number</label>
+            <InputText class="form-control" @bind-Value="filters.SerialNumber" />
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-primary w-100" @onclick="ApplyFilters">Search</button>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <p>⏳ Loading assets...</p>
+}
+else if (!assets.Any())
+{
+    <p>No assets found.</p>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Serial Number</th>
+                <th>Status</th>
+                <th>Condition</th>
+                <th>Purchase Date</th>
+                <th>Warranty Expiry</th>
+                <th>Spare</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in assets)
+            {
+                <tr>
+                    <td>@a.AssetID</td>
+                    <td><TruncateText Text="@a.AssetName" MaxLength="20" /></td>
+                    <td>@a.AssetType</td>
+                    <td><TruncateText Text="@a.SerialNumber" MaxLength="15" /></td>
+                    <td>@a.Status</td>
+                    <td>@a.Condition</td>
+                    <td>@a.PurchaseDate.ToShortDateString()</td>
+                    <td>@(a.WarrantyExpiryDate?.ToShortDateString() ?? "-")</td>
+                    <td>@a.IsSpare</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Asset> assets = new();
+    private bool isLoading = true;
+
+    private AssetFilter filters = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAssets();
+    }
+
+    private async Task LoadAssets()
+    {
+        isLoading = true;
+
+        // Call the new simple filter method
+        var result = await AssetService.GetFilteredAssetsAsync(
+            filters.AssetName,
+            filters.AssetType,
+            filters.Status,
+            filters.SerialNumber
+        );
+
+        assets = result.ToList();
+        isLoading = false;
+    }
+
+    private async Task ApplyFilters()
+    {
+        await LoadAssets();
+    }
+
+    private class AssetFilter
+    {
+        public string? AssetName { get; set; }
+        public string? AssetType { get; set; }
+        public string? Status { get; set; }
+        public string? SerialNumber { get; set; }
+    }
+}

@@ -1,0 +1,53 @@
+@page "/dashboard"
+@inject AssetApp.Services.DashboardService DashboardService
+
+<h3>📊 Asset Dashboard</h3>
+
+@if (isLoading)
+{
+    <p>⏳ Loading metrics...</p>
+}
+else
+{
+    @* <div>I have @totalAssets assets in total.</div> *@
+    <div class="d-flex flex-wrap">
+        <MetricCard Title="Total Assets" Count="@totalAssets" />
+        <MetricCard Title="Assigned Assets" Count="@assignedAssets" />
+        <MetricCard Title="Available Assets" Count="@availableAssets" />
+        <MetricCard Title="Under Repair" Count="@underRepairAssets" />
+        <MetricCard Title="Retired Assets" Count="@retiredAssets" />
+        <MetricCard Title="Spare Assets" Count="@spareAssets" />
+
+        @foreach (var kvp in assetsByType)
+        {
+            <MetricCard Title="@kvp.Key" Count="@kvp.Value" />
+        }
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private int totalAssets;
+    private int assignedAssets;
+    private int availableAssets;
+    private int underRepairAssets;
+    private int retiredAssets;
+    private int spareAssets;
+    private Dictionary<string, int> assetsByType = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+
+        totalAssets = await DashboardService.GetTotalAssetsAsync();
+        assignedAssets = await DashboardService.GetAssignedAssetsAsync();
+        availableAssets = await DashboardService.GetAvailableAssetsAsync();
+        underRepairAssets = await DashboardService.GetUnderRepairAssetsAsync();
+        retiredAssets = await DashboardService.GetRetiredAssetsAsync();
+        spareAssets = await DashboardService.GetSpareAssetsAsync();
+        assetsByType = await DashboardService.GetAssetsByTypeAsync();
+
+
+        isLoading = false;
+    }
+}
