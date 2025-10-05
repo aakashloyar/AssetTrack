@@ -3,6 +3,8 @@
 @inject AssetApp.Services.AssetService AssetService
 @using AssetApp.Models
 @using AssetApp.Components.Common
+@inherits AssetApp.Components.Common.ProtectedComponentBase
+
 <h3>💼 Assets</h3>
 
 <button class="btn btn-primary mb-3" @onclick="OpenAddModal">➕ Add Asset</button>
