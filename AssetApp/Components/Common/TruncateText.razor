@@ -1,0 +1,15 @@
+@namespace AssetApp.Components.Common
+<span>
+    @TruncatedText
+</span>
+@code {
+    [Parameter]
+    public string Text { get; set; } = string.Empty;
+
+    [Parameter]
+    public int MaxLength { get; set; } = 20;
+
+    private string TruncatedText => 
+        string.IsNullOrEmpty(Text) ? string.Empty :
+        (Text.Length > MaxLength ? Text.Substring(0, MaxLength) + "..." : Text);
+}
