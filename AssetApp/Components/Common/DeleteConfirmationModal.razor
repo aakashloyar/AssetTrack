@@ -1,0 +1,39 @@
+@* Components/Employee/DeleteConfirmationModal.razor *@
+@namespace AssetApp.Components.Common
+<div class="modal fade @(Visible ? "show d-block" : "")" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Title</h5>
+                <button type="button" class="btn-close" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong>@ItemName</strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+                <button class="btn btn-secondary" @onclick="Close">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public string ItemName { get; set; } = "";
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnConfirmed { get; set; }
+    [Parameter] public string Title { get; set; } = "Delete Confirmation";
+
+    private async Task Close()
+    {
+        if (OnClose.HasDelegate)
+            await OnClose.InvokeAsync(null);
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (OnConfirmed.HasDelegate)
+            await OnConfirmed.InvokeAsync(null);
+    }
+}
