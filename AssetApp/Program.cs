@@ -1,5 +1,8 @@
 using AssetApp.Components;
 using AssetApp.Services;
+using AssetApp.Models;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -9,6 +12,13 @@ builder.Services.AddRazorComponents()
 builder.Services.AddScoped<DatabaseService>();
 builder.Services.AddScoped<EmployeeService>();
 builder.Services.AddScoped<AssetService>();
+builder.Services.AddScoped<AssignmentService>();
+builder.Services.AddScoped<DashboardService>();
+
+
+builder.Services.AddScoped<Session>();                // Session handler
+builder.Services.AddSingleton<AuthService>();         // Single-user validation
+builder.Services.AddScoped<ProtectedSessionStorage>(); // Required for ProtectedSessionStorage
 
 var app = builder.Build();
 
@@ -16,15 +26,14 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
 app.UseAntiforgery();
 
+// 🧩 Map your Razor components
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
