@@ -1,4 +1,4 @@
-using AssetApp.Data;
+using AssetApp.SqlQueries;
 using AssetApp.Models;
 
 namespace AssetApp.Services

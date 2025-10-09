@@ -1,5 +1,5 @@
 using AssetApp.Models;
-using AssetApp.Data;
+using AssetApp.SqlQueries;
 
 namespace AssetApp.Services
 {
