@@ -1,47 +1,22 @@
 @page "/assets-filter"
+@rendermode InteractiveServer
 @inject AssetApp.Services.AssetService AssetService
+@inject AssetApp.Services.Session Session
+@inject NavigationManager NavigationManager
 @using AssetApp.Models
 @using AssetApp.Components.Common
-@rendermode InteractiveServer
-<h3>🔍 Asset Search & List</h3>
 
-<div class="card mb-3 p-3">
-    <div class="row g-2">
-        <div class="col-md-3">
-            <label>Asset Name</label>
-            <InputText class="form-control" @bind-Value="filters.AssetName" />
-        </div>
-        <div class="col-md-2">
-            <label>Asset Type</label>
-            <InputSelect class="form-select" @bind-Value="filters.AssetType">
-                <option value="">All</option>
-                @foreach (var type in Enum.GetValues<AssetType>())
-                {
-                    <option value="@type">@type</option>
-                }
-            </InputSelect>
-        </div>
-        <div class="col-md-2">
-            <label>Status</label>
-            <InputSelect class="form-select" @bind-Value="filters.Status">
-                <option value="">All</option>
-                @foreach (var status in Enum.GetValues<AssetStatus>())
-                {
-                    <option value="@status">@status</option>
-                }
-            </InputSelect>
-        </div>
-        <div class="col-md-3">
-            <label>Serial Number</label>
-            <InputText class="form-control" @bind-Value="filters.SerialNumber" />
-        </div>
-        <div class="col-md-2 d-flex align-items-end">
-            <button class="btn btn-primary w-100" @onclick="ApplyFilters">Search</button>
-        </div>
-    </div>
-</div>
+<h3>🔍 Asset Search & Filter</h3>
 
-@if (isLoading)
+@if (isLoading && !isAuthenticated)
+{
+    <p>⏳ Checking authentication...</p>
+}
+else if (!isAuthenticated)
+{
+    <p>Redirecting to login...</p>
+}
+else if (isLoading)
 {
     <p>⏳ Loading assets...</p>
 }
@@ -51,6 +26,42 @@ else if (!assets.Any())
 }
 else
 {
+    <div class="card mb-3 p-3 shadow-sm">
+        <div class="row g-2">
+            <div class="col-md-3">
+                <label>Asset Name</label>
+                <InputText class="form-control" @bind-Value="filters.AssetName" />
+            </div>
+            <div class="col-md-2">
+                <label>Asset Type</label>
+                <InputSelect class="form-select" @bind-Value="filters.AssetType">
+                    <option value="">All</option>
+                    @foreach (var type in Enum.GetValues<AssetType>())
+                    {
+                        <option value="@type">@type</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-md-2">
+                <label>Status</label>
+                <InputSelect class="form-select" @bind-Value="filters.Status">
+                    <option value="">All</option>
+                    @foreach (var status in Enum.GetValues<AssetStatus>())
+                    {
+                        <option value="@status">@status</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-md-3">
+                <label>Serial Number</label>
+                <InputText class="form-control" @bind-Value="filters.SerialNumber" />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100" @onclick="ApplyFilters">Search</button>
+            </div>
+        </div>
+    </div>
+
     <table class="table table-striped table-hover">
         <thead>
             <tr>
@@ -87,33 +98,39 @@ else
 @code {
     private List<Asset> assets = new();
     private bool isLoading = true;
+    private bool isAuthenticated = false;
 
     private AssetFilter filters = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadAssets();
-    }
+        if (!firstRender) return;
 
-    private async Task LoadAssets()
-    {
+        // Check session AFTER initial render
+        var username = await Session.GetUserAsync();
+        if (string.IsNullOrEmpty(username))
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        isAuthenticated = true;
+
+        // Load asset list
         isLoading = true;
-
-        // Call the new simple filter method
-        var result = await AssetService.GetFilteredAssetsAsync(
-            filters.AssetName,
-            filters.AssetType,
-            filters.Status,
-            filters.SerialNumber
-        );
-
-        assets = result.ToList();
+        assets = (await AssetService.GetFilteredAssetsAsync(
+            filters.AssetName, filters.AssetType, filters.Status, filters.SerialNumber)).ToList();
         isLoading = false;
+
+        StateHasChanged();
     }
 
     private async Task ApplyFilters()
     {
-        await LoadAssets();
+        isLoading = true;
+        assets = (await AssetService.GetFilteredAssetsAsync(
+            filters.AssetName, filters.AssetType, filters.Status, filters.SerialNumber)).ToList();
+        isLoading = false;
     }
 
     private class AssetFilter

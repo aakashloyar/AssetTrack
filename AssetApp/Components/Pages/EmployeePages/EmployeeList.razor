@@ -1,68 +1,82 @@
 @page "/employees"
 @rendermode InteractiveServer
 @inject AssetApp.Services.EmployeeService EmployeeService
+@inject AssetApp.Services.Session Session
+@inject NavigationManager NavigationManager
 @using AssetApp.Models
 @using AssetApp.Components.Common
 
 <h3>👥 Employees</h3>
 
-<button class="btn btn-primary mb-3" @onclick="OpenAddModal">➕ Add Employee</button>
-
-@if (isLoading)
+@if (isLoading && !isAuthenticated)
+{
+    <p>⏳ Checking authentication...</p>
+}
+else if (!isAuthenticated)
+{
+    <p>Redirecting to login...</p>
+}
+else if (isLoading)
 {
     <p>⏳ Loading employees...</p>
 }
-else if (!employees.Any())
-{
-    <p>No employees found.</p>
-}
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Department</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Designation</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var emp in employees)
-            {
+    <button class="btn btn-primary mb-3" @onclick="OpenAddModal">➕ Add Employee</button>
+
+    @if (!employees.Any())
+    {
+        <p>No employees found.</p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
                 <tr>
-                    <td>@emp.EmployeeID</td>
-                    <td><TruncateText Text="@emp.FullName" MaxLength="15" /></td>
-                    <td>@emp.Department</td>
-                    <td>@emp.Email</td>
-                    <td>@emp.PhoneNumber</td>
-                    <td>@emp.Designation</td>
-                    <td>@emp.Status</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary me-2" @onclick="() => OpenEditModal(emp)">Edit</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => OpenDeleteModal(emp)">Delete</button>
-                    </td>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Designation</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var emp in employees)
+                {
+                    <tr>
+                        <td>@emp.EmployeeID</td>
+                        <td><TruncateText Text="@emp.FullName" MaxLength="15" /></td>
+                        <td>@emp.Department</td>
+                        <td>@emp.Email</td>
+                        <td>@emp.PhoneNumber</td>
+                        <td>@emp.Designation</td>
+                        <td>@emp.Status</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary me-2" @onclick="() => OpenEditModal(emp)">Edit</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => OpenDeleteModal(emp)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <EmployeeFormModal Employee="@selectedEmployee" Title="@modalTitle" Visible="@formModalVisible"
+                       OnClose="CloseFormModal" OnSaved="SaveEmployee" />
+
+    <DeleteConfirmationModal Visible="@deleteModalVisible" ItemName="@selectedEmployee?.FullName"
+                             OnClose="CloseDeleteModal" OnConfirmed="ConfirmDelete" Title="Delete Employee" />
+
+    <Toast Message="@toastMessage" OnClose="()=> toastMessage = null" />
 }
-
-<EmployeeFormModal Employee="@selectedEmployee" Title="@modalTitle" Visible="@formModalVisible"
-                   OnClose="CloseFormModal" OnSaved="SaveEmployee" />
-
-<DeleteConfirmationModal Visible="@deleteModalVisible" ItemName="@selectedEmployee?.FullName"
-                         OnClose="CloseDeleteModal" OnConfirmed="ConfirmDelete" Title="Delete Employee" />
-
-<Toast Message="@toastMessage" OnClose="()=> toastMessage = null" />
 
 @code {
     private List<Employee> employees = new();
     private bool isLoading = true;
+    private bool isAuthenticated = false;
 
     private bool formModalVisible = false;
     private string modalTitle = "Add Employee";
@@ -71,12 +85,25 @@ else
     private bool deleteModalVisible = false;
     private string? toastMessage;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
+
+        var username = await Session.GetUserAsync();
+        if (string.IsNullOrEmpty(username))
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        isAuthenticated = true;
+
         isLoading = true;
         await EmployeeService.CreateTableIfNotExistsAsync();
         employees = (await EmployeeService.GetAllAsync()).ToList();
         isLoading = false;
+
+        StateHasChanged();
     }
 
     // ================= Add / Edit =================
@@ -103,31 +130,25 @@ else
         formModalVisible = true;
     }
 
-    private void CloseFormModal()
-    {
-        formModalVisible = false;
-    }
+    private void CloseFormModal() => formModalVisible = false;
 
     private async Task SaveEmployee(Employee emp)
     {
         if (emp.EmployeeID == 0)
         {
-            // Add
             await EmployeeService.AddAsync(emp);
             toastMessage = "✅ Employee added successfully!";
         }
         else
         {
-            // Update
             await EmployeeService.UpdateAsync(emp);
             toastMessage = "✅ Employee updated successfully!";
         }
 
         employees = (await EmployeeService.GetAllAsync()).ToList();
         formModalVisible = false;
-
-        // Auto-hide toast
         StateHasChanged();
+
         await Task.Delay(3000);
         toastMessage = null;
         StateHasChanged();
@@ -140,10 +161,7 @@ else
         deleteModalVisible = true;
     }
 
-    private void CloseDeleteModal()
-    {
-        deleteModalVisible = false;
-    }
+    private void CloseDeleteModal() => deleteModalVisible = false;
 
     private async Task ConfirmDelete()
     {
@@ -155,8 +173,8 @@ else
         }
 
         deleteModalVisible = false;
-
         StateHasChanged();
+
         await Task.Delay(3000);
         toastMessage = null;
         StateHasChanged();

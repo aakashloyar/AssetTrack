@@ -1,76 +1,89 @@
 @page "/assets"
 @rendermode InteractiveServer
 @inject AssetApp.Services.AssetService AssetService
+@inject AssetApp.Services.Session Session
+@inject NavigationManager NavigationManager
 @using AssetApp.Models
 @using AssetApp.Components.Common
-@inherits AssetApp.Components.Common.ProtectedComponentBase
 
 <h3>💼 Assets</h3>
 
-<button class="btn btn-primary mb-3" @onclick="OpenAddModal">➕ Add Asset</button>
-
-@if (isLoading)
+@if (isLoading && !isAuthenticated)
+{
+    <p>⏳ Checking authentication...</p>
+}
+else if (!isAuthenticated)
+{
+    <p>Redirecting to login...</p>
+}
+else if (isLoading)
 {
     <p>⏳ Loading assets...</p>
 }
-else if (!assets.Any())
-{
-    <p>No assets found.</p>
-}
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>S.No</th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Condition</th>
-                <th>Status</th>
-                <th>Is Spare</th>
-                <th>Purchase Date</th>
-                <th>Warranty Expiry</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var a in assets)
-            {
+    <button class="btn btn-primary mb-3" @onclick="OpenAddModal">➕ Add Asset</button>
+
+    @if (!assets.Any())
+    {
+        <p>No assets found.</p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
                 <tr>
-                    <td>@a.AssetID</td>
-                    <td><TruncateText Text="@a.SerialNumber" MaxLength="15" /></td>
-                    <td><TruncateText Text="@a.AssetName" MaxLength="20" /></td>
-                    <td>@(a.AssetType.ToString())</td>
-                    <td>@(a.Condition.ToString())</td>
-                    <td>@(a.Status.ToString())</td>
-                    <td>@(a.IsSpare.ToString())</td>
-                    <td>@a.PurchaseDate.ToShortDateString()</td>
-                    <td>@(a.WarrantyExpiryDate?.ToShortDateString() ?? "-")</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary me-2" @onclick="() => OpenEditModal(a)">Edit</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => OpenDeleteModal(a)">Delete</button>
-                    </td>
+                    <th>ID</th>
+                    <th>S.No</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Condition</th>
+                    <th>Status</th>
+                    <th>Is Spare</th>
+                    <th>Purchase Date</th>
+                    <th>Warranty Expiry</th>
+                    <th>Actions</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var a in assets)
+                {
+                    <tr>
+                        <td>@a.AssetID</td>
+                        <td><TruncateText Text="@a.SerialNumber" MaxLength="15" /></td>
+                        <td><TruncateText Text="@a.AssetName" MaxLength="20" /></td>
+                        <td>@(a.AssetType.ToString())</td>
+                        <td>@(a.Condition.ToString())</td>
+                        <td>@(a.Status.ToString())</td>
+                        <td>@(a.IsSpare.ToString())</td>
+                        <td>@a.PurchaseDate.ToShortDateString()</td>
+                        <td>@(a.WarrantyExpiryDate?.ToShortDateString() ?? "-")</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary me-2" @onclick="() => OpenEditModal(a)">Edit</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => OpenDeleteModal(a)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <AssetFormModal Asset="@selectedAsset" Title="@modalTitle" Visible="@formModalVisible"
+                    OnClose="CloseFormModal" OnSaved="SaveAsset" />
+
+    <DeleteConfirmationModal Visible="@deleteModalVisible"
+                             Title="Delete Asset"
+                             ItemName="@selectedAsset?.AssetName"
+                             OnClose="CloseDeleteModal"
+                             OnConfirmed="ConfirmDelete" />
+
+    <Toast Message="@toastMessage" OnClose="() => toastMessage = null" />
 }
-
-<AssetFormModal Asset="@selectedAsset" Title="@modalTitle" Visible="@formModalVisible"
-                OnClose="CloseFormModal" OnSaved="SaveAsset" />
-
-<DeleteConfirmationModal Visible="@deleteModalVisible"
-                         Title="Delete Asset"
-                         ItemName="@selectedAsset?.AssetName"
-                         OnClose="CloseDeleteModal"
-                         OnConfirmed="ConfirmDelete" />
-
-<Toast Message="@toastMessage" OnClose="() => toastMessage = null" />
 
 @code {
     private List<Asset> assets = new();
     private bool isLoading = true;
+    private bool isAuthenticated = false;
 
     private bool formModalVisible = false;
     private string modalTitle = "Add Asset";
@@ -79,12 +92,27 @@ else
     private bool deleteModalVisible = false;
     private string? toastMessage;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
+
+        // Check session AFTER initial render
+        var username = await Session.GetUserAsync();
+        if (string.IsNullOrEmpty(username))
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        isAuthenticated = true;
+
+        // Load assets after authentication
         isLoading = true;
         await AssetService.CreateTableIfNotExistsAsync();
         assets = (await AssetService.GetAllAsync()).ToList();
         isLoading = false;
+
+        StateHasChanged();
     }
 
     // ================= Add / Edit =================
