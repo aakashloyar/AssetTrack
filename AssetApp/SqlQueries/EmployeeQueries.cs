@@ -1,4 +1,4 @@
-namespace AssetApp.Data
+namespace AssetApp.SqlQueries
 {
     public static class EmployeeQueries
     {
