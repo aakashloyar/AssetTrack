@@ -1,0 +1,115 @@
+@using AssetApp.Models
+
+<div class="modal fade @(Visible ? "show d-block" : "")" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Title</h5>
+                <button type="button" class="btn-close" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@Asset" OnValidSubmit="SubmitForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Asset Name</label>
+                            <InputText class="form-control" @bind-Value="Asset.AssetName" />
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Asset Type</label>
+                            <InputSelect class="form-select" @bind-Value="Asset.AssetType">
+                                @foreach (var type in Enum.GetValues<AssetType>())
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Make/Model</label>
+                            <InputText class="form-control" @bind-Value="Asset.MakeModel" />
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Serial Number</label>
+                            <InputText class="form-control" @bind-Value="Asset.SerialNumber" />
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Purchase Date</label>
+                            <InputDate class="form-control" @bind-Value="Asset.PurchaseDate" />
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Warranty Expiry Date</label>
+                            <InputDate class="form-control" @bind-Value="Asset.WarrantyExpiryDate" />
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Condition</label>
+                            <InputSelect class="form-select" @bind-Value="Asset.Condition">
+                                @foreach (var cond in Enum.GetValues<AssetCondition>())
+                                {
+                                    <option value="@cond">@cond</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Status</label>
+                            <InputSelect class="form-select" @bind-Value="Asset.Status">
+                                @foreach (var stat in Enum.GetValues<AssetStatus>())
+                                {
+                                    <option value="@stat">@stat</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Is Spare</label>
+                            <InputSelect class="form-select" @bind-Value="Asset.IsSpare">
+                                @foreach (var spare in Enum.GetValues<IsSpare>())
+                                {
+                                    <option value="@spare">@spare</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-12 mb-2">
+                            <label class="form-label">Specifications / Details</label>
+                            <InputTextArea class="form-control" @bind-Value="Asset.Specifications" rows="3" />
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Save</button>
+                        <button type="button" class="btn btn-secondary" @onclick="Close">Cancel</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<Asset> OnSaved { get; set; }
+    [Parameter] public Asset Asset { get; set; } = new();
+    [Parameter] public string Title { get; set; } = "Asset Form";
+
+    private async Task Close()
+    {
+        if (OnClose.HasDelegate)
+            await OnClose.InvokeAsync(null);
+    }
+
+    private async Task SubmitForm()
+    {
+        if (OnSaved.HasDelegate)
+            await OnSaved.InvokeAsync(Asset);
+    }
+}
