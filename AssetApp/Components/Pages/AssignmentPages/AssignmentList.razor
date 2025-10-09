@@ -1,89 +1,112 @@
-@page "/assignments"
+@page "/assets-assignments"
 @rendermode InteractiveServer
 @inject AssetApp.Services.AssignmentService AssignmentService
+@inject AssetApp.Services.Session Session
+@inject NavigationManager NavigationManager
 @using AssetApp.Models
 @using AssetApp.Components.Common
 
-<h3>💻 Asset Assignments</h3>
-
-<button class="btn btn-primary mb-3" @onclick="OpenAddModal">➕ Assign Asset</button>
+<h3>💼 👥 Asset Assignments</h3>
 
 @if (isLoading)
 {
     <p>⏳ Loading assignments...</p>
 }
-else if (!assignments.Any())
+else if (!isAuthenticated)
 {
-    <p>No assignments found.</p>
+    <p>Redirecting to login...</p>
 }
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Asset ID</th>
-                <th>Employee ID</th>
-                <th>Assigned Date</th>
-                <th>Returned Date</th>
-                <th>Notes</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var a in assignments)
-            {
+    <button class="btn btn-primary mb-3" @onclick="OpenAddModal">➕ Assign Asset</button>
+
+    @if (!assignments.Any())
+    {
+        <p>No assignments found.</p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
                 <tr>
-                    <td>@a.AssignmentID</td>
-                    <td>@a.AssetID</td>
-                    <td>@a.EmployeeID</td>
-                    <td>@a.AssignedDate.ToShortDateString()</td>
-                    <td>@(a.ReturnedDate?.ToShortDateString() ?? "-")</td>
-                    <td>@a.Notes</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary me-2" @onclick="() => OpenEditModal(a)">Edit</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => OpenDeleteModal(a)">Delete</button>
-                    </td>
+                    <th>ID</th>
+                    <th>Asset ID</th>
+                    <th>Employee ID</th>
+                    <th>Assigned Date</th>
+                    <th>Returned Date</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var a in assignments)
+                {
+                    <tr>
+                        <td>@a.AssignmentID</td>
+                        <td>@a.AssetID</td>
+                        <td>@a.EmployeeID</td>
+                        <td>@a.AssignedDate.ToShortDateString()</td>
+                        <td>@(a.ReturnedDate?.ToShortDateString() ?? "-")</td>
+                        <td>@a.Notes</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary me-2" @onclick="() => OpenEditModal(a)">Edit</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => OpenDeleteModal(a)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <AssignmentFormModal Assignment="@selectedAssignment"
+                         Title="@modalTitle"
+                         Visible="@formModalVisible"
+                         OnClose="CloseFormModal"
+                         OnSaved="SaveAssignment" />
+
+    <DeleteConfirmationModal Visible="@deleteModalVisible"
+                             Title="Delete Assignment"
+                             ItemName="@($"AssetID {selectedAssignment?.AssetID}")"
+                             OnClose="CloseDeleteModal"
+                             OnConfirmed="ConfirmDelete" />
+
+    <Toast Message="@toastMessage" OnClose="() => toastMessage = null" />
 }
 
-<AssignmentFormModal Assignment="@selectedAssignment"
-                     Title="@modalTitle"
-                     Visible="@formModalVisible"
-                     OnClose="CloseFormModal"
-                     OnSaved="SaveAssignment" />
-
-<DeleteConfirmationModal Visible="@deleteModalVisible"
-                         Title="Delete Assignment"
-                         ItemName="@($"AssetID {selectedAssignment?.AssetID}")"
-                         OnClose="CloseDeleteModal"
-                         OnConfirmed="ConfirmDelete" />
-
-<Toast Message="@toastMessage" OnClose="() => toastMessage = null" />
-
 @code {
-    private List<Assignment> assignments = new();
     private bool isLoading = true;
-
+    private bool isAuthenticated = false;
+    private List<Assignment> assignments = new();
     private bool formModalVisible = false;
     private string modalTitle = "Assign Asset";
     private Assignment selectedAssignment = new();
-
     private bool deleteModalVisible = false;
     private string? toastMessage;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
+
+        // Step 1: Check authentication after prerender
+        var username = await Session.GetUserAsync();
+        if (string.IsNullOrEmpty(username))
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        isAuthenticated = true;
         isLoading = true;
+        StateHasChanged();
+
+        // Step 2: Load assignments
         await AssignmentService.CreateTableIfNotExistsAsync();
         assignments = (await AssignmentService.GetAllAsync()).ToList();
+
         isLoading = false;
+        StateHasChanged();
     }
 
-    // ================= Add / Edit =================
     private void OpenAddModal()
     {
         selectedAssignment = new Assignment { AssignedDate = DateTime.Now };
@@ -93,17 +116,7 @@ else
 
     private void OpenEditModal(Assignment assignment)
     {
-        if (assignment == null) return;
-
-        selectedAssignment = new Assignment
-        {
-            AssignmentID = assignment.AssignmentID,
-            AssetID = assignment.AssetID,
-            EmployeeID = assignment.EmployeeID,
-            AssignedDate = assignment.AssignedDate,
-            ReturnedDate = assignment.ReturnedDate,
-            Notes = assignment.Notes
-        };
+        selectedAssignment = assignment;
         modalTitle = "Edit Assignment";
         formModalVisible = true;
     }
@@ -115,17 +128,12 @@ else
         try
         {
             if (assignment.AssignmentID == 0)
-            {
                 await AssignmentService.AddAsync(assignment);
-                toastMessage = "✅ Asset assigned successfully!";
-            }
             else
-            {
                 await AssignmentService.UpdateAsync(assignment);
-                toastMessage = "✅ Assignment updated successfully!";
-            }
 
             assignments = (await AssignmentService.GetAllAsync()).ToList();
+            toastMessage = "✅ Saved successfully!";
         }
         catch (Exception ex)
         {
@@ -139,10 +147,8 @@ else
         StateHasChanged();
     }
 
-    // ================= Delete =================
     private void OpenDeleteModal(Assignment assignment)
     {
-        if (assignment == null) return;
         selectedAssignment = assignment;
         deleteModalVisible = true;
     }
@@ -155,7 +161,7 @@ else
         {
             await AssignmentService.DeleteAsync(selectedAssignment.AssignmentID);
             assignments = (await AssignmentService.GetAllAsync()).ToList();
-            toastMessage = "✅ Assignment deleted successfully!";
+            toastMessage = "✅ Deleted successfully!";
         }
         catch (Exception ex)
         {
