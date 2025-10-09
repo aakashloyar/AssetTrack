@@ -1,0 +1,66 @@
+@rendermode InteractiveServer
+@using AssetApp.Services
+@inject Session Session
+@inject NavigationManager NavigationManager
+
+<div class="topbar bg-dark text-white px-4 py-2 d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center gap-3">
+        <a class="navbar-brand text-white fw-semibold fs-4" href="/">AssetTrack</a>
+
+        <NavLink class="nav-link text-white" href="/" Match="NavLinkMatch.All">Home</NavLink>
+        <NavLink class="nav-link text-white" href="/assets">Assets</NavLink>
+        <NavLink class="nav-link text-white" href="/employees">Employees</NavLink>
+        <NavLink class="nav-link text-white" href="/assets-dashboard">Dashboard</NavLink>
+        <NavLink class="nav-link text-white" href="/assets-filter">Filter Assets</NavLink>
+        <NavLink class="nav-link text-white" href="/assets-assignments">Assignments</NavLink>  
+    </div>
+
+    <div>
+        @if (isLoaded)
+        {
+            @if (isLoggedIn)
+            {
+                <button class="btn btn-outline-light" @onclick="Logout">Logout</button>
+            }
+            else
+            {
+                <button class="btn btn-outline-light" @onclick="Login">Login</button>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private bool isLoggedIn = false;
+    private bool isLoaded = false;
+    private string? currentUser;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var user = await Session.GetUserAsync();
+            currentUser = user;
+            isLoggedIn = !string.IsNullOrEmpty(user);
+            isLoaded = true;
+            Console.WriteLine($"[TopBar] Loaded: isLoggedIn={isLoggedIn}, user={user}");
+            StateHasChanged();
+        }
+    }
+
+    private void Login()
+    {
+        Console.WriteLine("[TopBar] Login clicked");
+        NavigationManager.NavigateTo("/login");
+    }
+
+    private async Task Logout()
+    {
+        Console.WriteLine("[TopBar] Logout clicked");
+        await Session.RemoveUserAsync();
+        isLoggedIn = false;
+        currentUser = null;
+        StateHasChanged();
+        NavigationManager.NavigateTo("/login", forceLoad: true);
+    }
+}
